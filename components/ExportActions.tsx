@@ -16,7 +16,7 @@ export const ExportActions: React.FC<ExportActionsProps> = ({ data }) => {
 
     try {
       const savedGamesRaw = localStorage.getItem('canvas_games');
-      const savedGames: GameDesignDocument[] = savedGamesRaw ? JSON.parse(savedGamesRaw) : [];
+      const savedGames: GameDesignDocument[] = savedGamesRaw && Array.isArray(JSON.parse(savedGamesRaw)) ? JSON.parse(savedGamesRaw) : [];
       
       const newEntry = { ...data, lastSaved: Date.now() };
       
@@ -67,27 +67,38 @@ export const ExportActions: React.FC<ExportActionsProps> = ({ data }) => {
         div.style.height = 'auto'; // ensure full height shows
         textarea.parentNode?.replaceChild(div, textarea);
       });
+      
+      // Inject CSS for printing to ensure containers don't break awkwardly
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .break-inside-avoid { page-break-inside: avoid !important; }
+        .canvas-section { page-break-inside: avoid !important; }
+      `;
+      clone.appendChild(style);
 
       // 3. Render off-screen container
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.top = '0';
-      container.style.width = '210mm'; 
+      container.style.width = '210mm'; // Enforce A4 width on the container
       container.appendChild(clone);
       document.body.appendChild(container);
 
       // Force white background for PDF
       clone.style.backgroundColor = '#ffffff';
       clone.style.color = '#000000';
+      clone.style.width = '100%'; 
+      clone.style.height = 'auto'; // Let it grow
+      
       const sections = clone.querySelectorAll('.bg-slate-50\\/50');
       sections.forEach((sec) => ((sec as HTMLElement).style.backgroundColor = '#f8fafc'));
 
       const opt = {
-        margin:       [5, 0, 5, 0], // Small margin
+        margin:       [0, 0, 0, 0], // Zero margin because CSS handles the padding inside A4 div
         filename:     `Canvas_${data.title.replace(/\s+/g, '_')}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, scrollY: 0, windowWidth: 794 }, // 794px is approx 210mm at 96DPI
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       
@@ -114,7 +125,7 @@ export const ExportActions: React.FC<ExportActionsProps> = ({ data }) => {
       const borderStyle = `2px solid ${purple}`;
       const cellPadding = 'padding: 8px; vertical-align: top;';
       const labelStyle = 'font-size: 10px; font-weight: bold; text-transform: uppercase; color: #555; display: block; margin-bottom: 4px;';
-      const inputStyle = 'border-bottom: 1px solid #ddd; padding-bottom: 2px; display: block; min-height: 20px; width: 100%; font-family: Arial, sans-serif; white-space: pre-wrap; word-wrap: break-word;';
+      const inputStyle = 'border-bottom: 1px solid #ddd; padding-bottom: 2px; display: block; min-height: 20px; width: 100%; font-family: Arial, sans-serif; white-space: pre-wrap; word-wrap: break-word; font-size: 11px;';
       
       const htmlContent = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
